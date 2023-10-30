@@ -1,11 +1,10 @@
 import tensorflow as tf
-from tensorflow.keras import layers, models
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow import keras
 import numpy as np
-from PIL import Image
+import cv2 as cv
 
 # Создайте сверточную нейронную сеть
-model = models.Sequential()
+model = keras.models.Sequential()
 # ... (Архитектура нейронной сети, как в предыдущем ответе)
 
 # Компилируем модель
@@ -50,7 +49,7 @@ train_images, train_masks = images[:split_index], masks[:split_index]
 val_images, val_masks = images[split_index:], masks[split_index:]
 
 # Создайте генераторы для аугментации данных
-train_datagen = ImageDataGenerator(
+train_datagen = keras.preprocessing.image.ImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
@@ -58,7 +57,7 @@ train_datagen = ImageDataGenerator(
     vertical_flip=True
 )
 
-val_datagen = ImageDataGenerator()
+val_datagen = keras.preprocessing.image.ImageDataGenerator()
 
 # Обучите модель
 batch_size = 16
