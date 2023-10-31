@@ -1,69 +1,85 @@
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
-import cv2 as cv
+import cv2
 
-# Создайте сверточную нейронную сеть
-model = keras.models.Sequential()
-# ... (Архитектура нейронной сети, как в предыдущем ответе)
+# Initialize the video capture object
+video_file = "./test.mp4"
+cap = cv2.VideoCapture(video_file)  # 0 for the default camera, or provide a video file path
 
-# Компилируем модель
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+tracker = cv2.TrackerGOTURN.create()
+cursor_x, cursor_y = -1, -1  # Изначально координаты курсора отсутствуют
+tracking = False
+bbox = None
 
-# Вывести информацию о модели
-model.summary()
+# Функция обработчика события мыши
+def mouse_callback(event, x, y, flags, param):
+    global cursor_x, cursor_y, tracking, bbox
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cursor_x, cursor_y = x, y
+        bbox = (x - 20, y - 20, 40, 40)  # Создание bounding box 100x100 вокруг клика
+        tracking = True
+        print("fefss")
 
-# Загрузите и подготовьте данные
-def load_data(image_paths, mask_paths):
-    images = []
-    masks = []
+cv2.namedWindow('Object Tracking')
+cv2.setMouseCallback('Object Tracking', mouse_callback)
 
-    for img_path, mask_path in zip(image_paths, mask_paths):
-        image = Image.open(img_path)
-        image = image.resize((width, height))
-        image = np.array(image) / 255.0
+ok = False  # Инициализация переменной ok
 
-        mask = Image.open(mask_path)
-        mask = mask.convert('L')  # Преобразовать маску в оттенки серого
-        mask = mask.resize((width, height))
-        mask = np.array(mask) / 255.0
-        mask = np.expand_dims(mask, axis=-1)
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
 
-        images.append(image)
-        masks.append(mask)
+    if tracking:
+        # Начать отслеживание объекта
 
-    return np.array(images), np.array(masks)
+        tracker.init(frame, bbox)
+        print(tracker.init(frame, bbox))
+        print(bbox)
+        ok = True
+        tracking = False
 
-# Примеры путей к изображениям и маскам
-image_paths = ['image1.jpg', 'image2.jpg', ...]
-mask_paths = ['mask1.jpg', 'mask2.jpg', ...]
+    if ok:
+        ret, bbox = tracker.update(frame)
+        if ret:
+            x, y, w, h = [int(e) for e in bbox]
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        else:
+            cv2.putText(frame, "Object Lost", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
-# Загрузите данные
-images, masks = load_data(image_paths, mask_paths)
+    height, width, _ = frame.shape
 
-# Разделите данные на обучающий и проверочный наборы
-train_ratio = 0.8
-split_index = int(len(images) * train_ratio)
+    # Определение центра кадра
+    center_x = width // 2
+    center_y = height // 2
 
-train_images, train_masks = images[:split_index], masks[:split_index]
-val_images, val_masks = images[split_index:], masks[split_index:]
+    # Размер прицела и рамок
+    rect_size = 200
+    rect_thickness = 2
 
-# Создайте генераторы для аугментации данных
-train_datagen = keras.preprocessing.image.ImageDataGenerator(
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    horizontal_flip=True,
-    vertical_flip=True
-)
+    # Определение координат углов прямоугольника для прицела
+    top_left = (center_x - rect_size, center_y - rect_size)
+    bottom_right = (center_x + rect_size, center_y + rect_size)
 
-val_datagen = keras.preprocessing.image.ImageDataGenerator()
+    # Рисование прицела и рамок
+    cv2.rectangle(frame, top_left, bottom_right, (0, 255, 0), rect_thickness)
+    cv2.line(frame, (center_x, center_y - rect_size - 10), (center_x, center_y - rect_size - 5), (0, 255, 0),
+             rect_thickness)
+    cv2.line(frame, (center_x, center_y + rect_size + 5), (center_x, center_y + rect_size + 10), (0, 255, 0),
+             rect_thickness)
+    cv2.line(frame, (center_x - rect_size - 10, center_y), (center_x - rect_size - 5, center_y), (0, 255, 0),
+             rect_thickness)
+    cv2.line(frame, (center_x + rect_size + 5, center_y), (center_x + rect_size + 10, center_y), (0, 255, 0),
+             rect_thickness)
 
-# Обучите модель
-batch_size = 16
-epochs = 10
+    # Вывод координат курсора
+    cv2.putText(frame, f"Cursor: x={cursor_x}, y={cursor_y}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
 
-train_generator = train_datagen.flow(train_images, train_masks, batch_size=batch_size)
-val_generator = val_datagen.flow(val_images, val_masks, batch_size=batch_size)
+    cv2.imshow('Object Tracking', frame)
 
-model.fit(train_generator, steps_per_epoch=len(train_images) // batch_size, epochs=epochs, validation_data=val_generator, validation_steps=len(val_images) // batch_size)
+    # Press 's' to select a new object to track or 'q' to exit
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('q'):
+        break
+
+# Release the video capture and close all OpenCV windows
+cap.release()
+cv2.destroyAllWindows()
