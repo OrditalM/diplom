@@ -4,7 +4,11 @@ import cv2
 video_file = "./test.mp4"
 cap = cv2.VideoCapture(video_file)  # 0 for the default camera, or provide a video file path
 
-tracker = cv2.TrackerCSRT.create()
+tracker_1 = cv2.TrackerCSRT.create()
+#tracker_1 = cv2.TrackerKCF.create()
+#tracker_1 = cv2.TrackerMIL.create()
+#tracker_1 = cv2.TrackerGOTURN.create()
+#tracker_1 = cv2.TrackerDaSiamRPN.create()
 cursor_x, cursor_y = -1, -1  # Изначально координаты курсора отсутствуют
 tracking = False
 bbox = None
@@ -32,17 +36,26 @@ while True:
     if tracking:
         # Начать отслеживание объекта
 
-        tracker.init(frame, bbox)
-        print(tracker.init(frame, bbox))
+        tracker_1.init(frame, bbox)
+      #  tracker_2.init(frame, bbox)
+       # tracker_3.init(frame, bbox)
+       # tracker_4.init(frame, bbox)
+       # tracker_5.init(frame, bbox)
+        print(tracker_1.init(frame, bbox))
         print(bbox)
         ok = True
         tracking = False
 
     if ok:
-        ret, bbox = tracker.update(frame)
-        if ret:
-            x, y, w, h = [int(e) for e in bbox]
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        ret1, bbox1 = tracker_1.update(frame)
+      #  ret2, bbox2 = tracker_2.update(frame)
+      #  ret3, bbox3 = tracker_3.update(frame)
+       # ret4, bbox4 = tracker_4.update(frame)
+      #  ret5, bbox5 = tracker_5.update(frame)
+        if ret1:
+            x, y, w, h = [int(e) for e in bbox1]
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 0), 2)
+
         else:
             cv2.putText(frame, "Object Lost", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
             ok = False
