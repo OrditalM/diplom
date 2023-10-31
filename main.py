@@ -4,7 +4,7 @@ import cv2
 video_file = "./test.mp4"
 cap = cv2.VideoCapture(video_file)  # 0 for the default camera, or provide a video file path
 
-tracker = cv2.TrackerGOTURN.create()
+tracker = cv2.TrackerCSRT.create()
 cursor_x, cursor_y = -1, -1  # Изначально координаты курсора отсутствуют
 tracking = False
 bbox = None
@@ -12,6 +12,7 @@ bbox = None
 # Функция обработчика события мыши
 def mouse_callback(event, x, y, flags, param):
     global cursor_x, cursor_y, tracking, bbox
+    cv2.rectangle(frame, (x - 20, y - 20), (x + 40, y + 40), (0, 255, 0), 2)
     if event == cv2.EVENT_LBUTTONDOWN:
         cursor_x, cursor_y = x, y
         bbox = (x - 20, y - 20, 40, 40)  # Создание bounding box 100x100 вокруг клика
@@ -44,6 +45,7 @@ while True:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         else:
             cv2.putText(frame, "Object Lost", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
+            ok = False
 
     height, width, _ = frame.shape
 
