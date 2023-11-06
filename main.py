@@ -4,18 +4,24 @@ import datetime
 import cv2
 
 object_lost = False
-video_file = "./test.mp4"
+video_file = "./test_2.mp4"
 cap = cv2.VideoCapture(video_file)
 fps = 0
-#tracker_1 = cv2.TrackerCSRT.create()
+tracker_1 = cv2.TrackerCSRT.create()
 #tracker_1 = cv2.TrackerKCF.create()
-tracker_1 = cv2.TrackerMIL.create()
+#tracker_1 = cv2.TrackerMIL.create()
 #tracker_1 = cv2.TrackerGOTURN.create()
 #tracker_1 = cv2.TrackerDaSiamRPN.create()
 cursor_x, cursor_y = -1, -1
 tracking = False
 bbox = None
 desired_fps = 60
+
+real_object_width = 3
+
+focal_length = 0.025
+
+matrix_y, matrix_x = 6.5, 4.86
 
 tracking_time = datetime.datetime.now()
 
@@ -40,6 +46,8 @@ cv2.setMouseCallback('Object Tracking', mouse_callback)
 ok = False
 
 while True:
+    pixels_x, pixels_y = 1080, 1920 #cap.get(cv2.CAP_PROP_FRAME_WIDTH), cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    pixels_per_cm = pixels_x / matrix_x
     timer = cv2.getTickCount()
     ret, frame = cap.read()
     if not ret:
@@ -65,8 +73,10 @@ while True:
       #  ret5, bbox5 = tracker_5.update(frame)
         if ret1:
             x, y, w, h = [int(e) for e in bbox1]
+            object_size = ((w / 2) / pixels_per_cm) / 100
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 0), 2)
-
+            D = (focal_length*(real_object_width+object_size))/object_size
+            cv2.putText(frame, f"{round(D, 2)} M", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
         else:
             object_lost = True
             tracking_time = datetime.datetime.now() - start_tracking_time
@@ -109,8 +119,8 @@ while True:
     if object_lost:
         cv2.putText(frame, f"Object Lost at {tracking_time} moment", (50, 350),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
-    cv2.putText(frame, f"Object Lost at 0:00:26.263743 moment", (50, 350),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
+    #cv2.putText(frame, f"Object Lost at 0:00:26.263743 moment", (50, 350),
+    #            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
     cv2.imshow('Object Tracking', frame)
 
     key = cv2.waitKey(6) & 0xFF
