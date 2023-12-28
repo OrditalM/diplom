@@ -8,7 +8,7 @@ from constants import CameraConstants
 from tracker_funct import tracking_process
 
 object_lost = False
-video_file = "./test_2.mp4"
+video_file = "./test_4.mp4"
 cap = cv2.VideoCapture(video_file)
 fps = 0
 
