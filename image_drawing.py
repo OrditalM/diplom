@@ -15,23 +15,24 @@ class DrawFunctions:
     def __init__(self, frame):
         self.frame = frame
 
-    def draw_aim(self):
+    def draw_aim(self, zoom_scale=1):
         height, width, _ = self.frame.shape
         center_x = width // 2
         center_y = height // 2
-        rect_size = 200
-        rect_thickness = 2
+        rect_size = int(20 / zoom_scale)
+        rect_thickness = 1 if zoom_scale > 3 else 2
         top_left = (center_x - rect_size, center_y - rect_size)
         bottom_right = (center_x + rect_size, center_y + rect_size)
         cv2.rectangle(self.frame, top_left, bottom_right, (0, 255, 0), rect_thickness)
-        cv2.line(self.frame, (center_x, center_y - rect_size - 10), (center_x, center_y - rect_size - 5), Colors.green,
+        cv2.line(self.frame, (center_x, center_y - rect_size - 10), (center_x, center_y - rect_size - 100), Colors.green,
                  rect_thickness)
-        cv2.line(self.frame, (center_x, center_y + rect_size + 5), (center_x, center_y + rect_size + 10), Colors.green,
+        cv2.line(self.frame, (center_x, center_y + rect_size + 10), (center_x, center_y + rect_size + 100), Colors.green,
                  rect_thickness)
-        cv2.line(self.frame, (center_x - rect_size - 10, center_y), (center_x - rect_size - 5, center_y), Colors.green,
+        cv2.line(self.frame, (center_x - rect_size - 10, center_y), (center_x - rect_size - 100, center_y), Colors.green,
                  rect_thickness)
-        cv2.line(self.frame, (center_x + rect_size + 5, center_y), (center_x + rect_size + 10, center_y), Colors.green,
+        cv2.line(self.frame, (center_x + rect_size + 10, center_y), (center_x + rect_size + 100, center_y), Colors.green,
                  rect_thickness)
+        cv2.rectangle(self.frame, top_left, bottom_right, (0, 255, 0), rect_thickness)
 
         return self.frame
 

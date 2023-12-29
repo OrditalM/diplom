@@ -6,6 +6,7 @@ import cv2
 from image_drawing import DrawFunctions
 from constants import CameraConstants
 from tracker_funct import tracking_process
+from mouse_functions import zoom
 
 object_lost = False
 video_file = "./test_4.mp4"
@@ -16,6 +17,8 @@ cursor_x, cursor_y = -1, -1
 tracking = False
 bbox = None
 desired_fps = 60
+
+zoom_factor = 1.0
 
 real_object_width = 3
 
@@ -52,10 +55,10 @@ while True:
     if not ret:
         break
 
-    frame, tracking, object_lost, tracking_ok = tracking_process(frame, tracking, tracking_ok, bbox, real_object_width,
+    frame, tracking, object_lost, tracking_ok, target_center = tracking_process(frame, tracking, tracking_ok, bbox, real_object_width,
                                                                  start_tracking_time, object_lost)
 
-    frame = DrawFunctions(frame).draw_aim()
+    frame = DrawFunctions(frame).draw_aim(zoom_factor)
 
     frame = DrawFunctions(frame).debug_info(cursor_x, cursor_y)
 
@@ -70,11 +73,22 @@ while True:
     if object_lost:
         cv2.putText(frame, f"Object Lost at {tracking_time} moment", (50, 350),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 255), 2)
+
+    key = cv2.waitKey(30)
+    zoom_point = target_center
+    if key == ord('w'):
+        zoom_factor = zoom_factor + 0.1 if zoom_factor < 5.0 else zoom_factor
+
+    if key == ord('s'):
+        zoom_factor = zoom_factor - 0.1 if zoom_factor > 1.0 else zoom_factor
+
+    frame = zoom(frame, zoom_factor, zoom_point)
+
     cv2.imshow('Object Tracking', frame)
 
-    key = cv2.waitKey(6) & 0xFF
     if key == ord('q'):
         break
+
 
 cap.release()
 cv2.destroyAllWindows()

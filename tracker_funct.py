@@ -10,6 +10,10 @@ class Trackers:
 
 
 def tracking_process(frame, tracking, tracking_ok, bbox, real_object_width, start_tracking_time, object_lost):
+    height, width, _ = frame.shape
+    center_x = width // 2
+    center_y = height // 2
+
     if tracking:
         Trackers.tracker_1.init(frame, bbox)
         print(Trackers.tracker_1.init(frame, bbox))
@@ -17,18 +21,21 @@ def tracking_process(frame, tracking, tracking_ok, bbox, real_object_width, star
         tracking_ok = True
         tracking = False
 
+    target_center = [center_x, center_y]
+
     if tracking_ok:
         ret1, bbox1 = Trackers.tracker_1.update(frame)
         if ret1:
             x, y, w, h = [int(e) for e in bbox1]
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 255, 0), 2)
             distance_calculator(frame, bbox1, real_object_width)
+            target_center = [x + w / 2, y + h / 2]
         else:
             object_lost = True
             tracking_time = datetime.datetime.now() - start_tracking_time
             cv2.putText(frame, f"Object Lost at {datetime.datetime.now() - start_tracking_time} moment", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
             tracking_ok = False
-    return frame, tracking, object_lost, tracking_ok
+    return frame, tracking, object_lost, tracking_ok, target_center
 
 
 def distance_calculator(frame, bbox1, real_object_width):
