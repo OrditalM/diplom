@@ -1,0 +1,127 @@
+import time
+import datetime
+import cv2
+import threading
+from bin.image_processing.image_drawing import DrawFunctions
+from bin.constants import CameraConstants
+from bin.image_processing.tracker_functions import tracking_process
+from bin.image_processing.image_functions import zoom
+from bin.image_processing.neural_detection import detect_objects, load_model, load_labels, preprocess_image
+
+object_lost = False
+video_file = "./test.mp4"
+cap = cv2.VideoCapture(video_file)
+fps = 0
+
+cursor_x, cursor_y = -1, -1
+tracking = False
+bbox = None
+desired_fps = 60
+ml_detection = False
+zoom_factor = 1.0
+
+real_object_width = 6
+
+tracking_time = datetime.datetime.now()
+
+frame_count = 0
+start_time = time.time()
+start_tracking_time = datetime.datetime.now()
+pixels_x, pixels_y = 1080, 1920
+
+cap.set(cv2.CAP_PROP_FPS, 20)
+
+tracking_ok = False
+
+labels = load_labels()
+model_path = 'Tensorflow\workspace\models\my_ssd_mobnet\export\saved_model\\'
+model = load_model(model_path)
+
+pixels_per_cm = pixels_x / CameraConstants.matrix_x
+
+
+def ml_object_detection():
+    global results
+    results = [0, 0, 0, 0]
+    if ml_detection:
+        screen_size = frame.shape
+        img = preprocess_image(frame)
+        res = detect_objects(model, img, 0.6)
+        for result in res:
+            ymin, xmin, ymax, xmax = result['bounding_box']
+            xmin = int(max(1, xmin * screen_size[1]))
+            xmax = int(min(screen_size[1], xmax * screen_size[1]))
+            ymin = int(max(1, ymin * screen_size[0]))
+            ymax = int(min(screen_size[0], ymax * screen_size[0]))
+            results = [ymin, xmin, ymax, xmax]
+
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 3)
+            cv2.putText(frame, labels[result['class_id']], (xmin, min(ymax, screen_size[0] - 20)),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+
+def tracking_process_thread():
+    global tracking_results, tracking, object_lost, tracking_ok, target_center
+    tracking_results, tracking, object_lost, tracking_ok, target_center = tracking_process(frame, tracking, tracking_ok, bbox,
+                                                                                                  real_object_width,
+                                                                                                  start_tracking_time, object_lost)
+
+def mouse_callback(event, x, y, flags, param):
+    global cursor_x, cursor_y, tracking, bbox
+    cv2.rectangle(frame, (x - 40, y - 40), (x + 40, y + 40), (0, 255, 0), 2)
+    if event == cv2.EVENT_LBUTTONDOWN:
+        cursor_x, cursor_y = x, y
+        bbox = (x - 20, y - 20, 40, 40)
+        tracking = True
+        print("fefss")
+
+cv2.namedWindow('Object Tracking')
+cv2.setMouseCallback('Object Tracking', mouse_callback)
+
+threading.Thread(target=ml_object_detection).start()
+threading.Thread(target=tracking_process_thread).start()
+
+global frame
+while True:
+    timer = cv2.getTickCount()
+    ret, frame = cap.read()
+    if not ret:
+        break
+    frame_count += 1
+    if frame_count >= 10:
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        fps = frame_count / elapsed_time
+        start_time = end_time
+        frame_count = 0
+    cv2.putText(frame, f"FPS: {fps:.0f}", (50, 150), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 0, 255), 2)
+    if object_lost:
+        cv2.putText(frame, f"Object Lost at {tracking_time} moment", (50, 350),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 255, 255), 2)
+
+    fps_limiter = 30 if not ml_detection else 1
+
+    key = cv2.waitKey(fps_limiter)
+    zoom_point = target_center
+    if key == ord('w'):
+        zoom_factor = zoom_factor + 0.1 if zoom_factor < 5.0 else zoom_factor
+    if key == ord('s'):
+        zoom_factor = zoom_factor - 0.1 if zoom_factor > 1.0 else zoom_factor
+    if key == ord('y'):
+        ml_detection = True
+    if key == ord('t'):
+        ml_detection = False
+
+    frame = zoom(frame, zoom_factor, zoom_point)
+
+    frame = DrawFunctions(frame).draw_aim()
+    frame = DrawFunctions(frame).draw_control_keys()
+    frame = DrawFunctions(frame).debug_info(cursor_x, cursor_y)
+
+    cv2.imshow('Object Tracking', frame)
+
+    if key == ord('q'):
+        break
+
+
+cap.release()
+cv2.destroyAllWindows()
