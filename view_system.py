@@ -1,6 +1,8 @@
 import time
 import datetime
 import cv2
+import threading
+import queue
 from bin.image_processing.image_drawing import DrawFunctions
 from bin.image_processing.tracker_functions import tracking_process, distance_calculator
 from bin.image_processing.image_functions import zoom
@@ -21,6 +23,7 @@ tracking = False
 bbox = None
 desired_fps = 60
 ml_detection = False
+global ml_detection
 zoom_factor = 1.0
 
 real_object_width = 6
@@ -35,9 +38,38 @@ cap.set(cv2.CAP_PROP_FPS, 20)
 
 tracking_ok = False
 
+image_buffer = queue.Queue()
+message_buffer = queue.Queue()
+target_coord_buffer = queue.Queue()
+ml_results_buffer = queue.Queue()
+final_image_buffer = queue.Queue()
+
 labels = load_labels()
 model_path = 'Tensorflow\workspace\models\my_ssd_mobnet\export\saved_model\\'
 model = load_model(model_path)
+
+
+def ml_detection_process():
+    ml_frame = image_buffer.get()
+    screen_size = ml_frame.shape
+    img = preprocess_image(ml_frame)
+    res = detect_objects(model, img, 0.6)
+    for result in res:
+        ymin, xmin, ymax, xmax = result['bounding_box']
+        xmin = int(max(1, xmin * screen_size[1]))
+        xmax = int(min(screen_size[1], xmax * screen_size[1]))
+        ymin = int(max(1, ymin * screen_size[0]))
+        ymax = int(min(screen_size[0], ymax * screen_size[0]))
+        cv2.rectangle(ml_frame, (xmin, ymin), (xmax, ymax), (0, 255, 0), 3)
+        cv2.putText(ml_frame, labels[result['class_id']], (xmin, min(ymax, screen_size[0] - 20)),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+        ml_results_buffer.put(ml_frame)
+
+
+def im_show_frame():
+    queue_frame = final_image_buffer.get()
+    cv2.imshow('Object Tracking', queue_frame)
+
 
 def mouse_callback(event, x, y, flags, param):
     global cursor_x, cursor_y, tracking, bbox
@@ -49,8 +81,10 @@ def mouse_callback(event, x, y, flags, param):
         tracking = True
         print("fefss")
 
+
 cv2.namedWindow('Object Tracking')
 cv2.setMouseCallback('Object Tracking', mouse_callback)
+
 
 while True:
     timer = cv2.getTickCount()
