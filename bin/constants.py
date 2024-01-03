@@ -35,6 +35,6 @@ class CameraConstants:
             return [800, 600]
         elif self.camera_choice == 'OV2710':
             return [1920, 1080]
-        elif self.camera_choice == 'ov2710':
+        elif self.camera_choice == 'ISOCELL_GW3':
             return [1920, 1080]
 

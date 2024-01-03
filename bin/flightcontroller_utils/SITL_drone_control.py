@@ -1,17 +1,17 @@
 import time
+import math
+from geopy.distance import distance, geodesic
 from dronekit import connect, VehicleMode, LocationGlobalRelative
 from math import radians, sin, cos, sqrt, atan2
 
 vehicle = connect('udp:127.0.0.1:14550', wait_ready=True)
 
+stop = False
+global stop
+
 def get_distance_metres(location1, location2):
-    dlat = radians(location2.lat - location1.lat)
-    dlon = radians(location2.lon - location1.lon)
-    a = sin(dlat / 2) * sin(dlat / 2) + cos(radians(location1.lat)) * cos(radians(location2.lat)) * sin(dlon / 2) * sin(dlon / 2)
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    earth_radius = 6371000
-    distance = earth_radius * c
-    return distance
+    dist_meters = geodesic(location1, location2).meters
+    return dist_meters
 
 def arm_and_takeoff(aTargetAltitude):
     print("Basic pre-arm checks")
@@ -35,43 +35,36 @@ def arm_and_takeoff(aTargetAltitude):
             break
         time.sleep(1)
 
-def fly_forward_and_return_home():
-    target_altitude = 5
-    arm_and_takeoff(target_altitude)
 
+def fly_to_target(location: LocationGlobalRelative):
     print("Flying forward...")
-    forward_distance = 100
-    forward_location = LocationGlobalRelative(vehicle.location.global_relative_frame.lat + 0.0001,
-                                              vehicle.location.global_relative_frame.lon,
-                                              target_altitude)
-    vehicle.simple_goto(forward_location)
-
+    vehicle.simple_goto(location)
     while True:
-        target_distance = get_distance_metres(vehicle.location.global_frame, forward_location)
+        if stop:
+            position_for_now = vehicle.location.global_frame
+            vehicle.simple_goto(position_for_now)
+            break
+        target_distance = get_distance_metres(vehicle.location.global_frame, location)
         print("Distance to target: ", target_distance)
         time.sleep(1)
 
-    print("Returning home...")
-    home_location = LocationGlobalRelative(vehicle.location.global_relative_frame.lat,
-                                            vehicle.location.global_relative_frame.lon,
-                                            0)
-    vehicle.simple_goto(home_location)
 
-    while True:
-        print("Distance to home: ", vehicle.location.global_frame.distance_to(home_location))
-        if vehicle.location.global_frame.distance_to(home_location) <= 1:
-            print("Reached home")
-            break
-        time.sleep(1)
+def calculate_target_gps(current_location, azimuth, target_distance):
+    target_coords = distance(meters=target_distance).destination((current_location.lat, current_location.lon), azimuth)
+    return LocationGlobalRelative(target_coords.latitude, target_coords.longitude, 1)
 
-    print("Landing...")
-    vehicle.mode = VehicleMode("LAND")
-    while vehicle.location.global_relative_frame.alt > 0.1:
-        print("Altitude: ", vehicle.location.global_relative_frame.alt)
-        time.sleep(1)
 
-    print("Disarming")
-    vehicle.armed = False
-    vehicle.close()
+def tank_attack(target_image_point, image_width, distance):
+    azimuth_drone_from_north = vehicle.heading
+    camera_fov = 66.0
+    target_x_on_image = target_image_point[0]
+    target_y_on_image = target_image_point[1]
+    azimuth_to_target_from_north = azimuth_drone_from_north + (target_x_on_image - image_width / 2) * (
+                camera_fov / image_width)
+    target_location = calculate_target_gps(vehicle.location.global_frame, azimuth_to_target_from_north, distance)
+    fly_to_target(target_location, False)
 
-fly_forward_and_return_home()
+
+arm_and_takeoff(15)
+
+tank_attack([int(1920/2), 100], 1920, 100)

@@ -24,7 +24,7 @@ def draw_lines_to_edges(frame, bbox):
     return frame
 
 
-def tracking_process(frame, tracking, tracking_ok, bbox, real_object_width, start_tracking_time, object_lost):
+def tracking_process(frame, tracking, tracking_ok, bbox, start_tracking_time, object_lost):
     height, width, _ = frame.shape
     center_x = width // 2
     center_y = height // 2
@@ -43,8 +43,6 @@ def tracking_process(frame, tracking, tracking_ok, bbox, real_object_width, star
         if ret1:
             bbox1 = [int(e) for e in bbox1]
             cv2.rectangle(frame, (bbox1[0], bbox1[1]), (bbox1[0] + bbox1[2], bbox1[1] + bbox1[3]), (0, 255, 0), 2)
-            distance = distance_calculator(frame, bbox1, real_object_width)
-            cv2.putText(frame, f"{round(distance, 2)} M", (100, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0), 2)
             frame = draw_lines_to_edges(frame, bbox1)
             target_center = (bbox1[0] + bbox1[2] // 2, bbox1[1] + bbox1[3] // 2)
         else:
@@ -57,10 +55,14 @@ def tracking_process(frame, tracking, tracking_ok, bbox, real_object_width, star
 
 
 def distance_calculator(frame, bbox1, real_object_width):
-    camera = CameraConstants(os.getenv("MAIN_CAMERA"))
-    pixels_x, pixels_y = camera.image_size
-    pixels_per_cm = pixels_x / camera.matrix_x
-    x, y, w, h = [int(e) for e in bbox1]
-    object_size = ((w / 2) / pixels_per_cm) / 100
-    distance = (camera.focal_length * (real_object_width + object_size)) / object_size
-    return distance
+    if not bbox1 == [0,0,0,0]:
+        camera = CameraConstants(os.getenv("MAIN_CAMERA"))
+        pixels_x, pixels_y = camera.image_size
+        pixels_per_cm = pixels_x / camera.matrix_x
+        x, y, w, h = [int(e) for e in bbox1]
+        object_size = ((w / 2) / pixels_per_cm) / 100
+        distance = (camera.focal_length * (real_object_width + object_size)) / object_size
+    else:
+        distance = 0
+    cv2.putText(frame, f"{round(distance, 2)} M", (100, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0), 2)
+    return frame
