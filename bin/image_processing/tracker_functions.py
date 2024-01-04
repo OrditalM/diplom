@@ -24,7 +24,7 @@ def draw_lines_to_edges(frame, bbox):
     return frame
 
 
-def tracking_process(frame, tracking, tracking_ok, bbox, start_tracking_time, object_lost):
+def tracking_process(frame, tracking, tracking_ok, bbox, object_lost):
     height, width, _ = frame.shape
     center_x = width // 2
     center_y = height // 2
@@ -47,9 +47,6 @@ def tracking_process(frame, tracking, tracking_ok, bbox, start_tracking_time, ob
             target_center = (bbox1[0] + bbox1[2] // 2, bbox1[1] + bbox1[3] // 2)
         else:
             object_lost = True
-            tracking_time = datetime.datetime.now() - start_tracking_time
-            cv2.putText(frame, f"Object Lost at {datetime.datetime.now() - start_tracking_time} moment",
-                        (100, 80), cv2.FONT_HERSHEY_COMPLEX, 0.75, (0, 0, 255), 2)
             tracking_ok = False
     return frame, bbox1, tracking, object_lost, tracking_ok, target_center
 
@@ -61,7 +58,10 @@ def distance_calculator(frame, bbox1, real_object_width):
         pixels_per_cm = pixels_x / camera.matrix_x
         x, y, w, h = [int(e) for e in bbox1]
         object_size = ((w / 2) / pixels_per_cm) / 100
-        distance = (camera.focal_length * (real_object_width + object_size)) / object_size
+        if object_size != 0:
+            distance = (camera.focal_length * (real_object_width + object_size)) / object_size
+        else:
+            distance = 0
     else:
         distance = 0
     cv2.putText(frame, f"{round(distance, 2)} M", (100, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0), 2)
