@@ -117,7 +117,6 @@ while True:
     if key == ord('h'):
         stop_flight = True
 
-
     if ml_results.empty():
         img_buffer.put([original_frame, screen_size])
 
