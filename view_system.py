@@ -13,7 +13,7 @@ from bin.image_processing.neural_detection import detect_objects, load_model, lo
 
 parse_config()
 object_lost = False
-video_file = "./test.mp4"
+video_file = 0
 cap = cv2.VideoCapture(video_file)
 object_image_size = 40
 cursor_x, cursor_y = -1, -1
@@ -133,9 +133,9 @@ while True:
 
     frame = DrawFunctions(frame).draw_aim()
     frame = zoom(frame, zoom_factor, zoom_point)
-
+    print(start_flight, tracking_ok)
     frame, target_distance = distance_calculator(frame, bbox1, real_object_width)
-    if start_flight and tracking:
+    if start_flight and tracking_ok:
         drone_control_queue.put([target_center, screen_size, start_flight, stop_flight, target_distance])
     frame = DrawFunctions(frame).draw_control_keys()
     frame = DrawFunctions(frame).debug_info(cursor_x, cursor_y)

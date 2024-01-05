@@ -41,14 +41,9 @@ def arm_and_takeoff(aTargetAltitude):
 def fly_to_target(location: LocationGlobalRelative, stop_flight):
     print("Flying forward...")
     vehicle.simple_goto(location)
-    while True:
-        if stop_flight:
-            position_for_now = vehicle.location.global_frame
-            vehicle.simple_goto(position_for_now)
-            break
-        target_distance = get_distance_metres(vehicle.location.global_frame, location)
-        print("Distance to target: ", target_distance)
-        time.sleep(1)
+    if stop_flight:
+        position_for_now = vehicle.location.global_frame
+        vehicle.simple_goto(position_for_now)
 
 
 def calculate_target_gps(current_location, azimuth, target_distance):
@@ -73,21 +68,26 @@ def tank_attack(target_image_point, image_width, distance):
 
 
 def drone_control_thread(drone_control_queue: queue.Queue):
-    if not drone_control_queue.empty():
-        target_image_point, screen_size, start_flight, stop_flight, target_distance = drone_control_queue.get()
-        if start_flight:
-            arm_and_takeoff(15)
-            while True:
+    arm_and_takeoff(15)
+    while True:
+        if not drone_control_queue.empty():
+            target_image_point, screen_size, start_flight, stop_flight, target_distance = drone_control_queue.get()
+            print("work")
+            if start_flight:
+                print("ok")
                 azimuth_drone_from_north = vehicle.heading
-                camera_fov = CameraConstants(os.getenv("MAIN_CAMERA")).fov()
+                camera_fov = CameraConstants(os.getenv("MAIN_CAMERA")).fov
                 target_x_on_image = target_image_point[0]
                 azimuth_to_target_from_north = azimuth_drone_from_north + (target_x_on_image - screen_size[0] / 2) * (
                         camera_fov / screen_size[0])
                 target_location = calculate_target_gps(vehicle.location.global_frame, azimuth_to_target_from_north,
                                                        target_distance)
                 fly_to_target(target_location, stop_flight)
+                target_distance = get_distance_metres(vehicle.location.global_frame, target_location)
+                print("Distance to target: ", target_distance)
+                time.sleep(0.025)
+            else:
                 time.sleep(0.025)
         else:
             time.sleep(0.025)
-    else:
-        time.sleep(0.025)
+            continue
