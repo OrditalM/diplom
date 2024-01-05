@@ -1,10 +1,10 @@
 import time
 import os
-from pyrf24.rf24 import *
+from nrf24 import NRF24
 
 ce_pin = int(os.getenv("CE_PIN"))
 csn_pin = int(os.getenv("CSN_PIN"))
-radio = RF24(ce_pin, csn_pin)
+radio = NRF24(ce_pin, csn_pin)
 radio.begin(ce_pin, csn_pin)
 channel = int(os.getenv("NRF_CHANNEL"))
 radio.setChannel(channel)

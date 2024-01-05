@@ -8,8 +8,8 @@ from bin.image_processing.image_drawing import DrawFunctions
 from bin.image_processing.tracker_functions import tracking_process, distance_calculator
 from bin.image_processing.image_functions import zoom
 from bin.config_parser import parse_config
-from bin.communications.nrf24_communication import main_comm_loop
-from bin.flightcontroller_utils.SITL_drone_control import drone_control_thread
+#from bin.communications.nrf24_communication import main_comm_loop
+from bin.flightcontroller_utils.SITL_drone_control import drone_auto_control_thread
 from bin.image_processing.neural_detection import detect_objects, load_model, load_labels, preprocess_image
 
 # Parse configuration
@@ -17,7 +17,7 @@ parse_config()
 
 # Initialize variables
 object_lost = False
-video_file = 0
+video_file = ".\\test_4.mp4"
 cap = cv2.VideoCapture(video_file)
 object_image_size = 40
 cursor_x, cursor_y = -1, -1
@@ -29,7 +29,7 @@ stop_flight = False
 zoom_factor = 1.0
 old_results = {}
 real_object_width = 6
-fps_limiter = 1
+fps_limiter = 15
 tracking_ok = False
 
 # Initialize queues
@@ -74,12 +74,12 @@ def ml_detection_process():
 
 # Function for drone control thread
 def drone_thread():
-    drone_control_thread(drone_control_queue, return_drone_info)
+    drone_auto_control_thread(drone_control_queue, return_drone_info)
 
 
 # Function for communication thread
-def communication_thread():
-    main_comm_loop(input_comm_queue, output_comm_queue)
+# def communication_thread():
+#     main_comm_loop(input_comm_queue, output_comm_queue)
 
 
 # Mouse callback function
@@ -102,7 +102,7 @@ cv2.setMouseCallback('Object Tracking', mouse_callback)
 # Start threads for ML detection, drone control, and communication
 t_ml_detection = threading.Thread(target=ml_detection_process)
 t_drone_control = threading.Thread(target=drone_thread)
-t_communications = threading.Thread(target=communication_thread())
+#t_communications = threading.Thread(target=communication_thread())
 t_ml_detection.start()
 t_drone_control.start()
 # t_communications.start()
@@ -149,6 +149,7 @@ while True:
         ml_detection = False
     elif key == ord('g'):
         start_flight = True
+        stop_flight = False
     elif key == ord('h'):
         stop_flight = True
 
@@ -170,14 +171,14 @@ while True:
     # Draw additional elements on the frame
     frame = DrawFunctions(frame).draw_aim()
     frame = zoom(frame, zoom_factor, zoom_point)
-    print(start_flight, tracking_ok)
     frame, target_distance = distance_calculator(frame, bbox1, real_object_width)
 
     # Send control commands to the drone
     if start_flight and tracking_ok:
-        drone_control_queue.put([target_center, screen_size, start_flight, stop_flight, target_distance])
-        stop_flight = return_drone_info.get()
-
+        if not return_drone_info.empty():
+            stop_flight = return_drone_info.get()
+        else:
+            drone_control_queue.put([target_center, screen_size, start_flight, stop_flight, target_distance])
     frame = DrawFunctions(frame).draw_control_keys()
     frame = DrawFunctions(frame).debug_info(cursor_x, cursor_y)
 
