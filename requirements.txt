@@ -4,3 +4,5 @@ opencv-contrib-python
 nrf24~=2.0.0
 opencv-python~=4.8.1.78
 dronekit~=2.9.2
+pyrf24~=0.2.5
+geopy~=2.4.1

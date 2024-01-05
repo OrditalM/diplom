@@ -1,37 +1,40 @@
 import time
 import os
-from nrf24 import NRF24
+from pyrf24.rf24 import *
+import queue  # Добавлен импорт модуля queue
 
-ce_pin = os.getenv("CE_PIN")
-csn_pin = os.getenv("CSN_PIN")
-radio = NRF24(ce_pin, csn_pin)
-radio.begin(0, 0, ce_pin, csn_pin)
-channel = os.getenv("NRF_CHANNEL")
+ce_pin = int(os.getenv("CE_PIN"))
+csn_pin = int(os.getenv("CSN_PIN"))
+radio = RF24(ce_pin, csn_pin)
+radio.begin(ce_pin, csn_pin)
+channel = int(os.getenv("NRF_CHANNEL"))
 radio.setChannel(channel)
-pipe = [os.getenv("PIPE_RX"), os.getenv("PIPE_TX")]
-payload_size = os.getenv("PAYLOAD_SIZE")
+pipe = [bytes(os.getenv("PIPE_RX")), bytes(os.getenv("PIPE_TX"))]
+payload_size = int(os.getenv("PAYLOAD_SIZE"))
 radio.setPayloadSize(payload_size)
 
 radio.openReadingPipe(1, pipe[1])
 radio.startListening()
 
 
-def main_comm_loop(message_data=None):
-    received_data = []
+def main_comm_loop(input_queue, output_queue):
     while True:
-        if radio.available():
-            if not message_data is None:
-                radio.openWritingPipe(pipe[0])
-                radio.write("ACK")
-                print("ACK sent")
-                radio.openReadingPipe(1, pipe[1])
-                radio.startListening()
-                time.sleep(1)
-                continue
-
-            radio.read(received_data, radio.getDynamicPayloadSize())
-            global received_data
-            print(f"Received: {received_data}")
+        if not input_queue.empty():
+            message_data = input_queue.get()
+            radio.openWritingPipe(pipe[0])
+            radio.write(bytes(message_data, 'utf-8'))
+            print(f"Data sent: {message_data}")
+            radio.openReadingPipe(1, pipe[1])
+            radio.startListening()
             time.sleep(1)
 
+        if radio.available():
+            received_data = 0
+            radio.read(received_data)
+            print(f"Received: {received_data}")
+            output_queue.put(received_data)
+            time.sleep(1)
 
+if __name__ == "__main__":
+
+    main_comm_loop(input_queue, output_queue)

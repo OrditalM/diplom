@@ -67,7 +67,7 @@ def tank_attack(target_image_point, image_width, distance):
 #tank_attack([int(1920/2), 100], 1920, 100)
 
 
-def drone_control_thread(drone_control_queue: queue.Queue):
+def drone_control_thread(drone_control_queue: queue.Queue, return_drone_info: queue.Queue):
     arm_and_takeoff(15)
     while True:
         if not drone_control_queue.empty():
@@ -75,17 +75,21 @@ def drone_control_thread(drone_control_queue: queue.Queue):
             print("work")
             if start_flight:
                 print("ok")
+                now_drone_position = vehicle.location.global_frame
                 azimuth_drone_from_north = vehicle.heading
                 camera_fov = CameraConstants(os.getenv("MAIN_CAMERA")).fov
                 target_x_on_image = target_image_point[0]
                 azimuth_to_target_from_north = azimuth_drone_from_north + (target_x_on_image - screen_size[0] / 2) * (
                         camera_fov / screen_size[0])
-                target_location = calculate_target_gps(vehicle.location.global_frame, azimuth_to_target_from_north,
+                target_location = calculate_target_gps(now_drone_position, azimuth_to_target_from_north,
                                                        target_distance)
                 fly_to_target(target_location, stop_flight)
-                target_distance = get_distance_metres(vehicle.location.global_frame, target_location)
-                print("Distance to target: ", target_distance)
+                distance_from_gps = get_distance_metres(now_drone_position, target_location)
+                print("Distance to target: ", distance_from_gps)
                 time.sleep(0.025)
+                if stop_flight:
+                    start_flight = False
+                    return_drone_info.put(start_flight)
             else:
                 time.sleep(0.025)
         else:

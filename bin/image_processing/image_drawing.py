@@ -50,8 +50,8 @@ class DrawFunctions:
         x = 10
         y = height - 70
         cv2.putText(self.frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, 0.75, (0, 255, 0), 2)
-        text = "Turn ON/OFF ML: Y/T   Stop Tracking: C    Zoom IN: W    ZOOM Out: S    Select Tracking Object: F"
+        text = "Turn ON/OFF ML: Y/T|Zoom IN/OUT: W/S|TrackerBox IN/OUT: Q/A|Stop Tracking: C|Start/Stop Flight:G/H"
         x = 10
         y = height - 50
-        cv2.putText(self.frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0), 2)
+        cv2.putText(self.frame, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 255, 0), 1)
         return self.frame
