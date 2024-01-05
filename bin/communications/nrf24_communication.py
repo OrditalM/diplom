@@ -1,7 +1,6 @@
 import time
 import os
 from pyrf24.rf24 import *
-import queue  # Добавлен импорт модуля queue
 
 ce_pin = int(os.getenv("CE_PIN"))
 csn_pin = int(os.getenv("CSN_PIN"))
@@ -34,7 +33,3 @@ def main_comm_loop(input_queue, output_queue):
             print(f"Received: {received_data}")
             output_queue.put(received_data)
             time.sleep(1)
-
-if __name__ == "__main__":
-
-    main_comm_loop(input_queue, output_queue)
