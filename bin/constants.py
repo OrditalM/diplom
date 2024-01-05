@@ -38,3 +38,12 @@ class CameraConstants:
         elif self.camera_choice == 'ISOCELL_GW3':
             return [1920, 1080]
 
+    @property
+    def fov(self):
+        if self.camera_choice == 'OV2640':
+            return 66
+        elif self.camera_choice == 'OV2710':
+            return 120
+        elif self.camera_choice == 'ISOCELL_GW3':
+            return 100
+

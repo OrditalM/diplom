@@ -7,6 +7,7 @@ from bin.image_processing.image_drawing import DrawFunctions
 from bin.image_processing.tracker_functions import tracking_process, distance_calculator
 from bin.image_processing.image_functions import zoom
 from bin.config_parser import parse_config
+from bin.flightcontroller_utils.SITL_drone_control import drone_control_thread
 from bin.image_processing.neural_detection import detect_objects, load_model, load_labels, preprocess_image
 
 
@@ -19,6 +20,8 @@ cursor_x, cursor_y = -1, -1
 tracking = False
 bbox = None
 ml_detection = False
+start_flight = False
+stop_flight = False
 zoom_factor = 1.0
 old_results = {}
 real_object_width = 6
@@ -28,9 +31,10 @@ tracking_ok = False
 
 img_buffer = queue.Queue()
 ml_results = queue.Queue()
+drone_control_queue = queue.Queue()
 
 labels = load_labels()
-model_path = 'Tensorflow\workspace\models\my_ssd_mobnet\export\saved_model\\'
+model_path = 'Tensorflow/workspace/models/my_ssd_mobnet/export/saved_model/'
 model = load_model(model_path)
 
 
@@ -59,6 +63,11 @@ def ml_detection_process():
                 results_dict[key] = results
             ml_results.put(results_dict)
 
+
+def drone_thread():
+    drone_control_thread(drone_control_queue)
+
+
 def mouse_callback(event, x, y, flags, param):
     global cursor_x, cursor_y, tracking, bbox
     cv2.rectangle(frame, (x - int(object_image_size / 2), y - int(object_image_size / 2), object_image_size, object_image_size),
@@ -73,8 +82,10 @@ def mouse_callback(event, x, y, flags, param):
 cv2.namedWindow('Object Tracking')
 cv2.setMouseCallback('Object Tracking', mouse_callback)
 
-t = threading.Thread(target=ml_detection_process)
-t.start()
+t_ml_detection = threading.Thread(target=ml_detection_process)
+t_drone_control = threading.Thread(target=drone_thread)
+t_ml_detection.start()
+t_drone_control.start()
 
 while True:
     timer = cv2.getTickCount()
@@ -101,6 +112,11 @@ while True:
         tracking_ok = False
     if key == ord('t'):
         ml_detection = False
+    if key == ord('g'):
+        start_flight = True
+    if key == ord('h'):
+        stop_flight = True
+
 
     if ml_results.empty():
         img_buffer.put([original_frame, screen_size])
@@ -119,7 +135,9 @@ while True:
     frame = DrawFunctions(frame).draw_aim()
     frame = zoom(frame, zoom_factor, zoom_point)
 
-    frame = distance_calculator(frame, bbox1, real_object_width)
+    frame, target_distance = distance_calculator(frame, bbox1, real_object_width)
+    if start_flight and tracking:
+        drone_control_queue.put([target_center, screen_size, start_flight, stop_flight, target_distance])
     frame = DrawFunctions(frame).draw_control_keys()
     frame = DrawFunctions(frame).debug_info(cursor_x, cursor_y)
 

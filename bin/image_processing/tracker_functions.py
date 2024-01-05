@@ -1,6 +1,6 @@
-import cv2
 import datetime
 import os
+import cv2
 from bin.constants import CameraConstants
 
 
@@ -65,4 +65,4 @@ def distance_calculator(frame, bbox1, real_object_width):
     else:
         distance = 0
     cv2.putText(frame, f"{round(distance, 2)} M", (100, 300), cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 255, 0), 2)
-    return frame
+    return frame, distance
